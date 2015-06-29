@@ -4,12 +4,14 @@
 
 #define LDR_BLUE_PIN A0
 #define LDR_RED_PIN A1
+#define POT_VALUE_CONTROL A2
+
 #define BLUE_GOAL_THRESHOLD 350
 #define RED_GOAL_THRESHOLD 350
 
 JQ6500_Serial mp3(12,13);
 
-// Мячи подряд
+// (Комментарии) Мячи подряд
 #define FIRST_BLOOD 11
 #define TWO_GOALS_IN_ROW 12
 #define THREE_GOALS_IN_ROW 13
@@ -23,7 +25,7 @@ JQ6500_Serial mp3(12,13);
 #define BLUE_TEAM_WIN 31
 #define HOPELESS 32
 
-// Спец-ситуации на поле
+// (Комментарии) Спец-ситуации на поле
 #define THREE_FAST_GOALS 20
 #define FLAWLESS_VICTORY 21
 #define FAST_REVENGE_GOAL 22
@@ -34,6 +36,14 @@ JQ6500_Serial mp3(12,13);
 #define FAST_GOAL 27
 #define RAPID_EXCHANGE 28
 #define LONG_TIME_NO_GOALS 29
+
+#define GOAL_SOUNDS_START 33
+#define GOAL_SOUNDS_END 42
+#define COW_SOUND 43
+#define CARRY_ON 44
+#define FLO 45
+#define APL 46
+#define ZOID 47
 
 boolean blueGoaled = false; // синим забили
 boolean redGoaled = false; // красным забили
@@ -58,7 +68,8 @@ long thresholdOfHopelessness = firstThresholdOfHopelessness;
 void setup() {
   mp3.begin(9600);
   mp3.reset();
-  mp3.setVolume(12); 
+  mp3.setVolume(18);
+  mp3.playFileByIndexNumber(GAME_STARTED);
 }
 
 boolean isRedGoaled() {
@@ -88,8 +99,19 @@ boolean isBlueGoaled() {
 }
 
 boolean checkSpecial() {
+    int randNum = rand()%(GOAL_SOUNDS_END-GOAL_SOUNDS_START + 1) + GOAL_SOUNDS_START;
+    mp3.playFileByIndexNumber(randNum);
+    delay(2000);
+    int goalsDelay = abs(redLastGoalMills - blueLastGoalMills);
+    if(goalsDelay < 10000 && redLastGoalMills != 0 && blueLastGoalMills !=0){
+        mp3.playFileByIndexNumber(RAPID_EXCHANGE);
+        return true; 
+     }
+    
     if((blueGoals + redGoals) == 1) {
         mp3.playFileByIndexNumber(FIRST_BLOOD);
+        delay(2000);
+        mp3.playFileByIndexNumber(APL);
         return true;
     } else if (redFastGoalsCount == 3 || blueFastGoalsCount == 3) {
         mp3.playFileByIndexNumber(THREE_FAST_GOALS);
@@ -101,6 +123,8 @@ boolean checkSpecial() {
         return true;
     } else if (blueGoaledInRow == 2 || redGoaledInRow == 2) {
         mp3.playFileByIndexNumber(TWO_GOALS_IN_ROW);
+        delay(2000);
+        mp3.playFileByIndexNumber(APL);
         return true;
     } else if (blueGoaledInRow == 3 || redGoaledInRow == 3) {
         mp3.playFileByIndexNumber(THREE_GOALS_IN_ROW);
@@ -113,6 +137,9 @@ boolean checkSpecial() {
         return true;
     } else if (blueGoaledInRow == 6 || redGoaledInRow == 6) {
         mp3.playFileByIndexNumber(SIX_GOALS_IN_ROW);
+        delay(2000);
+        mp3.playFileByIndexNumber(CARRY_ON);
+        delay(2000);
         return true;
     } else if (blueGoaledInRow == 7 || redGoaledInRow == 7) {
         mp3.playFileByIndexNumber(SEVEN_GOALS_IN_ROW);
@@ -131,16 +158,21 @@ void resetMatch(){
     delay(200);
     if (blueGoals > redGoals){
         mp3.playFileByIndexNumber(RED_TEAM_WIN);
+        delay(2000);
+        mp3.playFileByIndexNumber(ZOID);
         delay(3000);
     } else{
         mp3.playFileByIndexNumber(BLUE_TEAM_WIN);
+        delay(1000);
+        mp3.playFileByIndexNumber(ZOID);
         delay(3000);
     }
 
-
-    if (blueGoaledInRow == 10 || redGoaledInRow == 10)
+    if (blueGoaledInRow == 10 || redGoaledInRow == 10){
         mp3.playFileByIndexNumber(FLAWLESS_VICTORY);
-
+        delay(2000);
+        mp3.playFileByIndexNumber(COW_SOUND);
+    }
     blueGoals = 0;
     redGoals = 0;
 
@@ -152,9 +184,13 @@ void resetMatch(){
 
     redFastGoalsCount = 0;
     blueFastGoalsCount = 0;
+
+    mp3.playFileByIndexNumber(GAME_STARTED);
 }
 
 void loop() {
+    int soundValue = map(analogRead(POT_VALUE_CONTROL), 0, 1023, 0, 30);
+    mp3.setVolume(soundValue);
     if(isBlueGoaled()){
         blueGoaled = true;
         blueGoals++;
