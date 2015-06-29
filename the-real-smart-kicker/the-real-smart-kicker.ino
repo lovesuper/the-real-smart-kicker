@@ -2,6 +2,18 @@
 #include <SoftwareSerial.h>
 #include <JQ6500_Serial.h>
 
+// LEDS
+
+#define RED_LED_DATA 11
+#define RED_LED_LATCH 10
+#define RED_LED_CLOCK 9
+
+#define BLUE_LED_DATA 8
+#define BLUE_LED_LATCH 7
+#define BLUE_LED_CLOCK 6
+
+//
+
 #define LDR_BLUE_PIN A0
 #define LDR_RED_PIN A1
 #define POT_VALUE_CONTROL A2
@@ -70,6 +82,34 @@ void setup() {
   mp3.reset();
   mp3.setVolume(18);
   mp3.playFileByIndexNumber(GAME_STARTED);
+
+  pinMode(RED_LED_DATA, OUTPUT);
+  pinMode(RED_LED_LATCH, OUTPUT);
+  pinMode(RED_LED_CLOCK, OUTPUT);
+
+  pinMode(BLUE_LED_DATA, OUTPUT);
+  pinMode(BLUE_LED_LATCH, OUTPUT);
+  pinMode(BLUE_LED_CLOCK, OUTPUT);
+
+  showBlueNumber(0);
+  showRedNumber(0);
+}
+
+byte segments[10] = {
+  0b00001000, 0b01101011, 0b01000100, 0b01000001, 0b00100011,
+  0b00010001, 0b00010000, 0b01001011, 0b00000000, 0b00000001
+};
+
+void showRedNumber(int number){
+  digitalWrite(RED_LED_LATCH, LOW);
+  shiftOut(RED_LED_DATA, RED_LED_CLOCK, LSBFIRST, segments[number]);
+  digitalWrite(RED_LED_LATCH, HIGH);  
+}
+
+void showBlueNumber(int number){
+  digitalWrite(BLUE_LED_LATCH, LOW);
+  shiftOut(BLUE_LED_DATA, BLUE_LED_CLOCK, LSBFIRST, segments[number]);
+  digitalWrite(BLUE_LED_LATCH, HIGH);  
 }
 
 boolean isRedGoaled() {
@@ -82,11 +122,13 @@ boolean isRedGoaled() {
 
     return result;
 }
+
 void printDebugInfo(char* team, int goals, int ldrValue) {
     char msg[40];
     sprintf(msg, "%s team goaled %d with LDR volume %d\n", team, goals, ldrValue);
     Serial.print(msg);
 }
+
 boolean isBlueGoaled() {
     int ldrBlueLightness = analogRead(LDR_BLUE_PIN);
     boolean result = ldrBlueLightness < BLUE_GOAL_THRESHOLD;
@@ -184,7 +226,8 @@ void resetMatch(){
 
     redFastGoalsCount = 0;
     blueFastGoalsCount = 0;
-
+    showBlueNumber(0);
+    showRedNumber(0);
     mp3.playFileByIndexNumber(GAME_STARTED);
 }
 
@@ -197,6 +240,7 @@ void loop() {
         blueGoaledInRow++;
         redGoaledInRow = 0;
         pointsOfHopelessness = 0;
+        showBlueNumber(blueGoals);
         if((millis() - redLastGoalMills) < 6000){
             redFastGoalsCount++;
             Serial.print(">Red fast goal number ");
@@ -220,6 +264,7 @@ void loop() {
         redGoals++;
         redGoaledInRow++;
         blueGoaledInRow = 0;
+        showRedNumber(redGoals);  
         if((millis() - blueLastGoalMills) < 6000){
             blueFastGoalsCount++;
             Serial.print(">Blue fast goal number ");
